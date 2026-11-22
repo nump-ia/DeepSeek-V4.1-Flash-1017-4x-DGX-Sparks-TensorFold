@@ -115,9 +115,11 @@ SERVED_NAME="${SERVED_NAME:-DeepSeek-V4.1-Flash-1017}"
 HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8888}"
 # A request's positions at most (prompt and reply), and the positions all requests share (the streams' extents in one
-# pool). The model's window is 1,048,576 tokens.
+# pool). The model's window is 1,048,576 tokens. POOL holds every concurrent stream's extent together, so PARALLEL
+# streams at the full window need PARALLEL x CONTEXT positions (16 x 1,048,576 = 16,777,216: all 16 at once, the
+# README's ceiling); with less, requests queue before PARALLEL is reached.
 CONTEXT="${CONTEXT:-1048576}"
-POOL="${POOL:-2097152}"
+POOL="${POOL:-16777216}"
 PARALLEL="${PARALLEL:-16}"             # requests at once (the engine's streams)
 ROUND_ROWS="${ROUND_ROWS:-48}"         # a decode round's rows at most (drafts of every stream together)
 MAX_TOKENS="${MAX_TOKENS:-32768}"      # a reply's budget when a request sets none

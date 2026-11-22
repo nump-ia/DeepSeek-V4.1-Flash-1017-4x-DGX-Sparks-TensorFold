@@ -43,6 +43,10 @@ for v in CONTEXT POOL PARALLEL ROUND_ROWS MAX_TOKENS; do [[ "${!v}" =~ ^[1-9][0-
 (( CONTEXT <= 1048576 )) || die "CONTEXT is at most 1048576 (the model's window), not $CONTEXT"
 (( POOL >= CONTEXT )) || die "POOL ($POOL) holds every stream's positions together: at least CONTEXT ($CONTEXT)"
 (( PARALLEL <= 16 )) || die "PARALLEL is 1 to 16, not $PARALLEL"
+# the pool holds every stream's extent together: with less than PARALLEL x CONTEXT positions, requests queue before
+# PARALLEL is reached (each concurrent stream needs its extent inside POOL)
+(( POOL >= PARALLEL * CONTEXT )) ||
+  warn "POOL ($POOL) holds $(( POOL / CONTEXT )) concurrent $(( CONTEXT / 1000 ))K-token windows: requests queue before PARALLEL ($PARALLEL); raise POOL to PARALLEL x CONTEXT ($(( PARALLEL * CONTEXT ))) to run all of PARALLEL at once"
 [[ "$SERVED_K" =~ ^(solo|all|off)$ ]] || die "SERVED_K is solo, all or off, not $SERVED_K"
 for v in THINKING DRAFTS VISION RDMA GRAPHS SIDE PREFETCH ENGRAM_AIO ENGRAM_PACKED ENGRAM_OWNED ENGRAM_INSTREAM RANK_LOCAL; do [[ "${!v}" =~ ^[01]$ ]] || die "$v is 0 or 1, not ${!v}"; done
 [[ "$ENGRAM_CACHE_MIB" =~ ^[0-9]+$ ]] || die "ENGRAM_CACHE_MIB is a count of MiB, not $ENGRAM_CACHE_MIB"
