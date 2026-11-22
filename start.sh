@@ -112,10 +112,14 @@ if (( ! DRY )); then
   docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
   for i in 1 2 3; do worker "$i" "docker rm -f '$CONTAINER_NAME' >/dev/null 2>&1; true"; done
   if ss -ltn "sport = :$PORT" 2>/dev/null | grep -q LISTEN; then die "port $PORT is already in use: $(ss -ltnp "sport = :$PORT" 2>/dev/null | tail -n +2)"; fi
-  here_gb=$(free -g | awk '/^Mem:/ {print $7}')
+  # MemAvailable from /proc/meminfo, not free's columns (whose count differs by release: an awk that finds no column
+  # 7 prints nothing, and the warning came out with a blank number); a number or 0, never an empty string
+  giB_free() { awk '/^MemAvailable:/ {printf "%d", $2/1048576}' /proc/meminfo; }
+  num_or_0() { [[ "$1" =~ ^[0-9]+$ ]] && echo "$1" || echo 0; }
+  here_gb=$(num_or_0 "$(giB_free)")
   (( here_gb >= 100 )) || warn "only ${here_gb} GiB memory available here: the weights take ~75 GiB a Spark, the caches the rest"
   for i in 1 2 3; do
-    g=$(worker "$i" "free -g | awk '/^Mem:/ {print \$7}'" 2>/dev/null || echo 0)
+    g=$(num_or_0 "$(worker "$i" "awk '/^MemAvailable:/ {printf \"%d\", \$2/1048576}' /proc/meminfo" 2>/dev/null || true)")
     (( g >= 100 )) || warn "only ${g} GiB memory available on $(worker_host "$i"): stop other GPU work there"
   done
 fi
